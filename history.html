@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1"><title>History ♻️</title><style>*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}body{background:linear-gradient(135deg,#0f5132,#198754);min-height:100vh;padding:20px}.card{max-width:600px;margin:auto;background:#fff;border-radius:20px;padding:24px}h1{text-align:center;color:#0f5132}.top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:12px}.top a{color:#198754;text-decoration:none;font-weight:600}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px}th{background:#f0f9f2;color:#0f5132}button{width:100%;padding:12px;background:#dc3545;color:#fff;border:none;border-radius:12px;margin-top:14px;font-weight:700;cursor:pointer}.empty{text-align:center;color:#888;padding:20px}</style></head>
+<body><div class="card"><div class="top"><span>♻️ Smart Waste</span><span><a href="final2.html">Home</a> | <a href="#" onclick="logout()">Logout</a></span></div><h1>📋History</h1><p style="text-align:center;font-size:13px;color:#666" id="userLine">Hi, shalini</p><table><thead><tr><th>Date</th><th>Waste Type</th><th>Accuracy</th><th>Bin</th></tr></thead><tbody id="rows"></tbody></table><p class="empty" id="empty" style="display:none">No history yet! Go classify 1 image!</p><button onclick="clearHist()">Clear History</button></div>
+<script>
+const bins={PAPER:"💙 Blue",PLASTIC:"💛 Yellow",ORGANIC:"💚 Green",METAL:"🩶 Grey",GLASS:"🤍 White",CARDBOARD:"🤎 Brown"};
+function logout(){localStorage.removeItem('username');location.href='login.html'}
+function clearHist(){localStorage.removeItem('waste_history');location.reload()}
+let user=localStorage.getItem('username')||localStorage.getItem('user')||'shalini';
+if(user==='undefined' || !user) user='shalini';
+document.getElementById('userLine').textContent='Hi, '+user;
+let hist=JSON.parse(localStorage.getItem('waste_history')||'[]');
+let tbody=document.getElementById('rows');
+if(hist.length===0){document.getElementById('empty').style.display='block'}
+hist.forEach(h=>{let tr=document.createElement('tr');tr.innerHTML=`<td>${h.date}</td><td><b>${h.pred}</b></td><td>${h.conf}%</td><td>${bins[h.pred]||''}</td>`;tbody.appendChild(tr);});
+</script></body></html>

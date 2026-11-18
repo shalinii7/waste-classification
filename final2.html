@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Waste Classifier</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
+  body{background:linear-gradient(135deg,#0f5132,#198754);min-height:100vh;padding:20px}
+  .card{max-width:480px;margin:0 auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.3)}
+  .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:12px}
+  .top a{color:#198754;text-decoration:none;font-weight:600}
+  h1{text-align:center;color:#0f5132;font-size:24px;margin-bottom:18px}
+  .upload{border:2px dashed #198754;border-radius:14px;padding:20px;text-align:center;background:#f0f9f2}
+  .upload span{font-size:40px}
+  #preview{width:100%;max-height:280px;object-fit:cover;border-radius:12px;display:none;margin-top:14px}
+  button{width:100%;padding:14px;border:none;border-radius:12px;background:#198754;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:14px}
+  button:disabled{background:#aaa;cursor:not-allowed}
+  .result{display:none;margin-top:16px;padding:16px;border-radius:14px;text-align:center;background:#f8f9fa;border:2px solid #198754}
+  .bar{height:12px;background:#e9ecef;border-radius:20px;overflow:hidden;margin:10px 0}
+  .fill{height:100%;background:#198754;transition:width .6s;width:0%}
+  .tip{font-size:13px;color:#333;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <span>♻️ Smart Waste</span>
+    <span><a href="history.html">History</a> | <a href="#" onclick="logout()">Logout</a></span>
+  </div>
+
+  <h1>Upload Waste Image</h1>
+
+  <div class="upload">
+    <span>📁</span><br>
+    <b>Select Waste Image</b><br>
+    <small>JPG, PNG</small><br><br>
+    <input type="file" id="file" accept="image/*" style="display:block;margin:0 auto" onchange="showPreview(event)">
+  </div>
+
+  <img id="preview">
+  <button id="btn" onclick="predict()" disabled>Classify Waste →</button>
+
+  <div id="res" class="result">
+    <h2 id="pred">-</h2>
+    <p>Confidence: <b id="conf">0%</b></p>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <p class="tip" id="tip"></p>
+    <button onclick="location.reload()">Classify Another</button>
+  </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+
+const EMOJI = {
+  PAPER: '📰',
+  PLASTIC: '🧴',
+  ORGANIC: '🌱',
+  METAL: '🔩',
+  GLASS: '🫙',
+  CARDBOARD: '📦'
+};
+
+const tips = {
+  PAPER: "💙 Tip: Blue Bin - Recycle!",
+  PLASTIC: "💛 Tip: Yellow Bin - Recycle!",
+  ORGANIC: "💚 Tip: Green Bin - Compost!",
+  METAL: "🩶 Tip: Grey Bin - Metal Recycle!",
+  GLASS: "🤍 Tip: White Bin - Glass Recycle!",
+  CARDBOARD: "🤎 Tip: Brown Bin - Cardboard Recycle!"
+};
+
+const colors = {
+  PAPER: "#0d6efd",
+  PLASTIC: "#ffc107",
+  ORGANIC: "#198754",
+  METAL: "#6c757d",
+  GLASS: "#0dcaf0",
+  CARDBOARD: "#fd7e14"
+};
+
+function showPreview(event){
+  let f = event.target.files[0];
+  if(!f) return;
+  let reader = new FileReader();
+  reader.onload = () => {
+    let img = document.getElementById('preview');
+    img.src = reader.result;
+    img.style.display = 'block';
+    document.getElementById('btn').disabled = false;
+    document.getElementById('res').style.display = 'none';
+  };
+  reader.readAsDataURL(f);
+}
+
+function logout(){
+  localStorage.removeItem('username');
+  location.href = 'login.html';
+}
+
+async function predict(){
+  let file = document.getElementById('file').files[0];
+  if(!file){ alert('Please select an image first!'); return; }
+  let btn = document.getElementById('btn');
+  btn.textContent = 'Classifying...';
+  btn.disabled = true;
+  let fd = new FormData();
+  fd.append('image', file);
+  try{
+    let res = await fetch(API + '/predict', {method: 'POST', body: fd});
+    let d = await res.json();
+    let pp = d.plain_preview || d || {};
+    let pred = (pp.predicted_class || pp.prediction || d.prediction || '').toString().toUpperCase();
+    if(!pred) pred = 'UNKNOWN';
+    let raw = pp.confidence ?? d.confidence ?? 0;
+    let conf = raw > 1 ? Math.round(raw) : Math.round(raw * 100);
+    let box = document.getElementById('res');
+    box.style.display = 'block';
+    box.style.border = '2px solid ' + (colors[pred] || '#198754');
+    document.getElementById('pred').textContent = (EMOJI[pred] || '♻️') + ' ' + pred;
+    document.getElementById('pred').style.color = colors[pred] || '#198754';
+    document.getElementById('conf').textContent = conf + '%';
+    let fill = document.getElementById('fill');
+    fill.style.width = conf + '%';
+    fill.style.background = colors[pred] || '#198754';
+    document.getElementById('tip').textContent = tips[pred] || '';
+    // Save history
+    try{
+      let hist = JSON.parse(localStorage.getItem('waste_history') || '[]');
+      hist.unshift({date: new Date().toLocaleString('en-IN'), pred: pred, conf: conf, user: localStorage.getItem('username') || 'shalini'});
+      localStorage.setItem('waste_history', JSON.stringify(hist.slice(0,50)));
+    }catch(e){}
+    box.scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    alert('Backend not running! Start backend/app.py');
+  }
+  btn.textContent = 'Classify Waste →';
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>

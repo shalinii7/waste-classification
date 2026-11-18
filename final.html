@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Waste Classifier ♻️</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
+body{background:linear-gradient(135deg,#0f5132,#198754);min-height:100vh;padding:20px}
+.card{max-width:480px;margin:0 auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.3)}
+h1{text-align:center;color:#0f5132;font-size:24px}
+.sub{text-align:center;color:#666;font-size:13px;margin:6px 0 18px}
+.upload{border:2px dashed #198754;border-radius:14px;padding:28px;text-align:center;cursor:pointer;background:#f0f9f2}
+.upload:hover{background:#e6f4ea}
+.upload span{font-size:40px}
+#preview{width:100%;max-height:280px;object-fit:cover;border-radius:12px;display:none;margin-top:14px}
+button{width:100%;padding:14px;border:none;border-radius:12px;background:#198754;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:14px}
+button:disabled{background:#aaa}
+.result{display:none;margin-top:16px;padding:16px;border-radius:14px;text-align:center}
+.bar{height:12px;background:#e9ecef;border-radius:20px;overflow:hidden;margin:10px 0}
+.fill{height:100%;background:#198754;transition:width .6s}
+.tip{font-size:13px;color:#333;margin-top:6px}
+.top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:12px}
+.top a{color:#198754;text-decoration:none;font-weight:600}
+.enc{font-size:10px;color:#888;word-break:break-all;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="top"><span>♻️ Smart Waste</span><span><a href="history.html">History</a> | <a href="#" onclick="logout()">Logout</a></span></div>
+<h1>Upload Waste Image</h1>
+<p class="sub">AI will classify into 6 types • Accuracy 87.36%</p>
+
+<div class="upload" onclick="document.getElementById('file').click()">
+<span>📸</span><br><b>Click to Upload / Take Photo</b><br><small>JPG, PNG • Cardboard, Glass, Metal, Organic, Paper, Plastic</small>
+<input type="file" id="file" accept="image/*" hidden onchange="showPreview(event)">
+</div>
+<img id="preview">
+<button id="btn" onclick="predict()" disabled>Classify Waste →</button>
+
+<div id="res" class="result">
+<h2 id="pred">PAPER</h2>
+<p>Confidence: <b id="conf">0%</b></p>
+<div class="bar"><div class="fill" id="fill"></div></div>
+<p class="tip" id="tip"></p>
+<p class="enc" id="enc"></p>
+<button onclick="location.reload()">Classify Another</button>
+</div>
+<p style="text-align:center;font-size:11px;color:#888;margin-top:12px">Backend ✅ Connected • Model Loaded • Encrypted API</p>
+</div>
+
+<script>
+const API="http://127.0.0.1:5000";
+const tips={PAPER:"💙 Tip: Blue Bin - Recycle!",PLASTIC:"💛 Tip: Yellow Bin - Recycle!",ORGANIC:"💚 Tip: Green Bin - Compost!",METAL:"🩶 Tip: Grey Bin - Metal Recycle!",GLASS:"🤍 Tip: White Bin - Glass Recycle!",CARDBOARD:"🤎 Tip: Brown Bin - Cardboard Recycle!"};
+const colors={PAPER:"#0d6efd",PLASTIC:"#ffc107",ORGANIC:"#198754",METAL:"#6c757d",GLASS:"#0dcaf0",CARDBOARD:"#fd7e14"};
+function showPreview(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{let img=document.getElementById('preview');img.src=r.result;img.style.display='block';document.getElementById('btn').disabled=false};r.readAsDataURL(f)}
+function logout(){localStorage.clear();location.href='login.html'}
+async function predict(){
+let file=document.getElementById('file').files[0];if(!file)return alert('Select image first');
+let btn=document.getElementById('btn');btn.textContent='Classifying...';btn.disabled=true;
+let fd=new FormData();fd.append('image',file);
+try{
+let res=await fetch(API+'/predict',{method:'POST',body:fd});
+let data=await res.json();
+let pred=(data.prediction||data.class||data.label||'').toUpperCase();
+let conf=Math.round((data.confidence||data.confidence_score||0)*100);
+if(conf<=1&&data.confidence) conf=Math.round(data.confidence);
+if(data.plain_preview){pred=(data.plain_preview.prediction||pred).toUpperCase();conf=Math.round((data.plain_preview.confidence||0)*100)}
+let box=document.getElementById('res');box.style.display='block';box.style.background='#f8f9fa';box.style.border='2px solid '+ (colors[pred]||'#198754');
+document.getElementById('pred').textContent='✅ '+pred;
+document.getElementById('pred').style.color=colors[pred]||'#198754';
+document.getElementById('conf').textContent=conf+'%';
+document.getElementById('fill').style.width=conf+'%';
+document.getElementById('fill').style.background=colors[pred]||'#198754';
+document.getElementById('tip').textContent=tips[pred]||'';
+document.getElementById('enc').textContent=data.encrypted_data?('Encrypted: YES • '+String(data.encrypted_data).substring(0,60)+'...'):'';
+box.scrollIntoView({behavior:'smooth'});
+}catch(e){alert('Backend not running! Start backend/app.py');btn.textContent='Classify Waste →';btn.disabled=false}
+}
+</script>
+</body>
+</html>
